@@ -1,0 +1,7 @@
+{
+    "java.project.referencedLibraries": [
+        "lib/**/*.jar",
+        "c:\\Users\\Gabriel\\OneDrive\\Área de Trabalho\\mysql-connector-j-9.2.0.jar",
+        "minha-pagina/subestacoes-api/lib/postgresql-42.7.5.jar"
+    ]
+}
