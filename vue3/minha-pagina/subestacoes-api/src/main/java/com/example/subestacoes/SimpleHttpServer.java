@@ -22,19 +22,16 @@ import java.util.HashMap;
 public class SimpleHttpServer {
 
     public static void main(String[] args) throws Exception {
-        // Cria o servidor HTTP na porta 8081
         HttpServer server = HttpServer.create(new InetSocketAddress(8081), 0);
         server.createContext("/subestacao", new SubestacaoHandler());
-        server.setExecutor(null); // O executor pode ser null para usar o padrão
+        server.setExecutor(null); 
         server.start();
         System.out.println("Servidor rodando na porta 8081...");
     }
 
-    // Manipulador para a rota /subestacao
     static class SubestacaoHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange exchange) throws IOException {
-            // Adiciona cabeçalhos CORS
             Headers headers = exchange.getResponseHeaders();
             headers.add("Access-Control-Allow-Origin", "*");
             headers.add("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS");
@@ -52,7 +49,7 @@ public class SimpleHttpServer {
             } else if ("PUT".equalsIgnoreCase(exchange.getRequestMethod())) {
                 handlePutRequest(exchange);
             } else {
-                exchange.sendResponseHeaders(405, -1); // Method Not Allowed
+                exchange.sendResponseHeaders(405, -1); 
             }
         }
 
@@ -60,25 +57,20 @@ public class SimpleHttpServer {
             String path = exchange.getRequestURI().getPath();
             String[] segments = path.split("/");
             if (segments.length == 2) {
-                // Buscar todas as subestações
                 final String URL = "jdbc:postgresql://localhost:5432/teste_sinapsis";
                 final String USER = "postgres";
-                final String PASSWORD = "palmeiras";
+                final String PASSWORD = "senha para o banco";
                 List<Map<String, Object>> subestacoesList = new ArrayList<>();
                 try {
-                    // Carregar o driver JDBC
                     Class.forName("org.postgresql.Driver");
         
-                    // Conectar ao banco de dados
                     Connection connection = DriverManager.getConnection(URL, USER, PASSWORD);
                     System.out.println("Conexão com o banco de dados bem-sucedida!");
         
-                    // Criar uma consulta
                     String query = "SELECT * FROM TB_SUBESTACAO";
                     Statement statement = connection.createStatement();
                     ResultSet resultSet = statement.executeQuery(query);
         
-                    // Processar os resultados da consulta
                     while (resultSet.next()) {
                         Map<String, Object> subestacao = new HashMap<>();
                         subestacao.put("id", resultSet.getInt("ID_SUBESTACAO"));
@@ -89,17 +81,15 @@ public class SimpleHttpServer {
                         subestacoesList.add(subestacao);
                     }
         
-                    // Fechar a conexão
                     resultSet.close();
                     statement.close();
                     connection.close();
                 } catch (Exception e) {
                     e.printStackTrace();
-                    exchange.sendResponseHeaders(500, -1); // Internal Server Error
+                    exchange.sendResponseHeaders(500, -1); 
                     return;
                 }
         
-                // Converter a lista de subestações para JSON manualmente
                 StringBuilder jsonResponse = new StringBuilder("[");
                 for (int i = 0; i < subestacoesList.size(); i++) {
                     Map<String, Object> subestacao = subestacoesList.get(i);
@@ -116,42 +106,36 @@ public class SimpleHttpServer {
                 }
                 jsonResponse.append("]");
         
-                // Enviar a resposta
                 exchange.getResponseHeaders().set("Content-Type", "application/json");
                 exchange.sendResponseHeaders(200, jsonResponse.toString().getBytes().length);
                 OutputStream os = exchange.getResponseBody();
                 os.write(jsonResponse.toString().getBytes());
                 os.close();
             } else if (segments.length == 3) {
-                // Buscar uma subestação específica e suas redes
                 int id;
                 try {
                     id = Integer.parseInt(segments[2]);
                 } catch (NumberFormatException e) {
-                    exchange.sendResponseHeaders(400, -1); // Bad Request
+                    exchange.sendResponseHeaders(400, -1); 
                     return;
                 }
         
                 final String URL = "jdbc:postgresql://localhost:5432/teste_sinapsis";
                 final String USER = "postgres";
-                final String PASSWORD = "palmeiras";
+                final String PASSWORD = "senha para o banco";
                 Map<String, Object> subestacao = new HashMap<>();
                 List<Map<String, Object>> redesList = new ArrayList<>();
                 try {
-                    // Carregar o driver JDBC
                     Class.forName("org.postgresql.Driver");
         
-                    // Conectar ao banco de dados
                     Connection connection = DriverManager.getConnection(URL, USER, PASSWORD);
                     System.out.println("Conexão com o banco de dados bem-sucedida!");
         
-                    // Criar uma consulta para a subestação
                     String querySubestacao = "SELECT * FROM TB_SUBESTACAO WHERE ID_SUBESTACAO = ?";
                     PreparedStatement preparedStatementSubestacao = connection.prepareStatement(querySubestacao);
                     preparedStatementSubestacao.setInt(1, id);
                     ResultSet resultSetSubestacao = preparedStatementSubestacao.executeQuery();
                     
-                    // Processar os resultados da consulta da subestação
                     if (resultSetSubestacao.next()) {
                         subestacao.put("id", resultSetSubestacao.getInt("ID_SUBESTACAO"));
                         subestacao.put("nome", resultSetSubestacao.getString("NOME"));
@@ -159,15 +143,13 @@ public class SimpleHttpServer {
                         subestacao.put("latitude", resultSetSubestacao.getDouble("LATITUDE"));
                         subestacao.put("longitude", resultSetSubestacao.getDouble("LONGITUDE"));
                     } else {
-                        exchange.sendResponseHeaders(404, -1); // Not Found
+                        exchange.sendResponseHeaders(404, -1); 
                         return;
                     }
-                    // Criar uma consulta para as redes
                     String queryRedes = "SELECT * FROM TB_REDE_MT WHERE ID_SUBESTACAO = ?";
                     PreparedStatement preparedStatementRedes = connection.prepareStatement(queryRedes);
                     preparedStatementRedes.setInt(1, id);
                     ResultSet resultSetRedes = preparedStatementRedes.executeQuery();
-                    // Processar os resultados da consulta das redes
                     while (resultSetRedes.next()) {
                         Map<String, Object> rede = new HashMap<>();
                         rede.put("id", resultSetRedes.getInt("ID_REDE_MT"));
@@ -176,7 +158,6 @@ public class SimpleHttpServer {
                         redesList.add(rede);
                     }
                     
-                    // Fechar a conexão
                     resultSetSubestacao.close();
                     preparedStatementSubestacao.close();
                     resultSetRedes.close();
@@ -184,11 +165,10 @@ public class SimpleHttpServer {
                     connection.close();
                 } catch (Exception e) {
                     e.printStackTrace();
-                    exchange.sendResponseHeaders(500, -1); // Internal Server Error
+                    exchange.sendResponseHeaders(500, -1); 
                     return;
                 }
         
-                // Converter a subestação e suas redes para JSON manualmente
                 StringBuilder jsonResponse = new StringBuilder("{");
                 jsonResponse.append("\"id\":").append(subestacao.get("id")).append(",")
                         .append("\"nome\":\"").append(subestacao.get("nome")).append("\",")
@@ -212,7 +192,6 @@ public class SimpleHttpServer {
                 jsonResponse.append("]}");
                 
         
-                // Enviar a resposta
                 exchange.getResponseHeaders().set("Content-Type", "application/json");
                 exchange.sendResponseHeaders(200, jsonResponse.toString().getBytes().length);
                 OutputStream os = exchange.getResponseBody();
@@ -220,11 +199,10 @@ public class SimpleHttpServer {
                 os.close();
                 System.out.println(jsonResponse.toString());
             } else {
-                exchange.sendResponseHeaders(405, -1); // Method Not Allowed
+                exchange.sendResponseHeaders(405, -1); 
             }
         }
         private void handlePostRequest(HttpExchange exchange) throws IOException {
-            // Ler o corpo da requisição
             InputStreamReader isr = new InputStreamReader(exchange.getRequestBody(), "utf-8");
             BufferedReader br = new BufferedReader(isr);
             StringBuilder body = new StringBuilder();
@@ -235,7 +213,6 @@ public class SimpleHttpServer {
             br.close();
             isr.close();
 
-            // Converter o corpo da requisição para JSON manualmente
             String requestBody = body.toString();
             String nome = extractJsonValue(requestBody, "nome");
             String codigo = extractJsonValue(requestBody, "codigo");
@@ -244,16 +221,13 @@ public class SimpleHttpServer {
 
             final String URL = "jdbc:postgresql://localhost:5432/teste_sinapsis";
             final String USER = "postgres";
-            final String PASSWORD = "palmeiras";
+            final String PASSWORD = "senha para o banco";
             try {
-                // Carregar o driver JDBC
                 Class.forName("org.postgresql.Driver");
 
-                // Conectar ao banco de dados
                 Connection connection = DriverManager.getConnection(URL, USER, PASSWORD);
                 System.out.println("Conexão com o banco de dados bem-sucedida!");
 
-                // Criar uma consulta para inserir a nova subestação
                 String query = "INSERT INTO TB_SUBESTACAO (NOME, CODIGO, LATITUDE, LONGITUDE) VALUES (?, ?, ?, ?)";
                 PreparedStatement preparedStatement = connection.prepareStatement(query, Statement.RETURN_GENERATED_KEYS);
                 preparedStatement.setString(1, nome);
@@ -262,14 +236,12 @@ public class SimpleHttpServer {
                 preparedStatement.setDouble(4, longitude);
                 int rowsAffected = preparedStatement.executeUpdate();
 
-                // Obter o ID gerado
                 int subestacaoId = -1;
                 ResultSet generatedKeys = preparedStatement.getGeneratedKeys();
                 if (generatedKeys.next()) {
                     subestacaoId = generatedKeys.getInt(1);
                 }
 
-                // Inserir redes associadas
                 String redesJson = requestBody.substring(requestBody.indexOf("\"redes\":") + 8);
                 redesJson = redesJson.substring(0, redesJson.lastIndexOf("]") + 1);
                 List<Map<String, String>> redesList = parseRedesJson(redesJson);
@@ -287,12 +259,10 @@ public class SimpleHttpServer {
                     redeStatement.close();
                 }
 
-                // Fechar a conexão
                 preparedStatement.close();
                 connection.close();
 
                 if (rowsAffected > 0) {
-                    // Converter a subestação criada para JSON manualmente
                     String jsonResponse = "{"
                             + "\"id\":" + subestacaoId + ","
                             + "\"nome\":\"" + nome + "\","
@@ -301,18 +271,17 @@ public class SimpleHttpServer {
                             + "\"longitude\":" + longitude
                             + "}";
 
-                    // Enviar a resposta
                     exchange.getResponseHeaders().set("Content-Type", "application/json");
-                    exchange.sendResponseHeaders(201, jsonResponse.getBytes().length); // Created
+                    exchange.sendResponseHeaders(201, jsonResponse.getBytes().length); 
                     OutputStream os = exchange.getResponseBody();
                     os.write(jsonResponse.getBytes());
                     os.close();
                 } else {
-                    exchange.sendResponseHeaders(500, -1); // Internal Server Error
+                    exchange.sendResponseHeaders(500, -1); 
                 }
             } catch (Exception e) {
                 e.printStackTrace();
-                exchange.sendResponseHeaders(500, -1); // Internal Server Error
+                exchange.sendResponseHeaders(500, -1); 
             }
         }
 
@@ -320,7 +289,7 @@ public class SimpleHttpServer {
             String path = exchange.getRequestURI().getPath();
             String[] segments = path.split("/");
             if (segments.length != 3) {
-                exchange.sendResponseHeaders(400, -1); // Bad Request
+                exchange.sendResponseHeaders(400, -1); 
                 return;
             }
 
@@ -328,11 +297,10 @@ public class SimpleHttpServer {
             try {
                 id = Integer.parseInt(segments[2]);
             } catch (NumberFormatException e) {
-                exchange.sendResponseHeaders(400, -1); // Bad Request
+                exchange.sendResponseHeaders(400, -1); 
                 return;
             }
 
-            // Ler o corpo da requisição
             InputStreamReader isr = new InputStreamReader(exchange.getRequestBody(), "utf-8");
             BufferedReader br = new BufferedReader(isr);
             StringBuilder body = new StringBuilder();
@@ -343,7 +311,6 @@ public class SimpleHttpServer {
             br.close();
             isr.close();
 
-            // Converter o corpo da requisição para JSON manualmente
             String requestBody = body.toString();
             String nome = extractJsonValue(requestBody, "nome");
             String codigo = extractJsonValue(requestBody, "codigo");
@@ -353,16 +320,13 @@ public class SimpleHttpServer {
 
             final String URL = "jdbc:postgresql://localhost:5432/teste_sinapsis";
             final String USER = "postgres";
-            final String PASSWORD = "palmeiras";
+            final String PASSWORD = "senha para o banco";
             try {
-                // Carregar o driver JDBC
                 Class.forName("org.postgresql.Driver");
 
-                // Conectar ao banco de dados
                 Connection connection = DriverManager.getConnection(URL, USER, PASSWORD);
                 System.out.println("Conexão com o banco de dados bem-sucedida!");
 
-                // Criar uma consulta para atualizar a subestação
                 String query = "UPDATE TB_SUBESTACAO SET NOME = ?, CODIGO = ?, LATITUDE = ?, LONGITUDE = ? WHERE ID_SUBESTACAO = ?";
                 PreparedStatement preparedStatement = connection.prepareStatement(query);
                 preparedStatement.setString(1, nome);
@@ -372,18 +336,17 @@ public class SimpleHttpServer {
                 preparedStatement.setInt(5, id);
                 int rowsAffected = preparedStatement.executeUpdate();
 
-                // Fechar a conexão
                 preparedStatement.close();
                 connection.close();
 
                 if (rowsAffected > 0) {
-                    exchange.sendResponseHeaders(200, -1); // OK
+                    exchange.sendResponseHeaders(200, -1); 
                 } else {
-                    exchange.sendResponseHeaders(404, -1); // Not Found
+                    exchange.sendResponseHeaders(404, -1); 
                 }
             } catch (Exception e) {
                 e.printStackTrace();
-                exchange.sendResponseHeaders(500, -1); // Internal Server Error
+                exchange.sendResponseHeaders(500, -1); 
             }
         }
 
@@ -391,7 +354,7 @@ public class SimpleHttpServer {
             String searchKey = "\"" + key + "\":";
             int startIndex = json.indexOf(searchKey) + searchKey.length();
             if (startIndex == searchKey.length() - 1) {
-                return null; // Key not found
+                return null; 
             }
             int endIndex = json.indexOf(",", startIndex);
             if (endIndex == -1) {
@@ -406,11 +369,11 @@ public class SimpleHttpServer {
 
         private List<Map<String, String>> parseRedesJson(String redesJson) {
             List<Map<String, String>> redesList = new ArrayList<>();
-            redesJson = redesJson.substring(1, redesJson.length() - 1); // Remove [ e ]
+            redesJson = redesJson.substring(1, redesJson.length() - 1); 
             String[] redesArray = redesJson.split("\\},\\{");
 
             for (String rede : redesArray) {
-                rede = rede.replace("{", "").replace("}", ""); // Remove { e }
+                rede = rede.replace("{", "").replace("}", ""); 
                 String[] keyValuePairs = rede.split(",");
                 Map<String, String> redeMap = new HashMap<>();
                 for (String pair : keyValuePairs) {
